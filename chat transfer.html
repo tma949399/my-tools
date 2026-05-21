@@ -1,0 +1,183 @@
+转换器code gpt版
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>对话转换 App</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0f0f0f;
+  color: #e5e5e5;
+}
+
+.app {
+  padding: 16px;
+  padding-top: 40px;
+}
+
+h1 {
+  font-size: 14px;
+  font-weight: 400;
+  color: #888;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+textarea {
+  width: 100%;
+  height: 180px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #ddd;
+  padding: 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+button.primary {
+  border-color: #c8473a;
+  color: #c8473a;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.status {
+  font-size: 12px;
+  color: #777;
+  margin: 10px 0;
+}
+
+.list {
+  margin-top: 20px;
+  border-top: 1px solid #222;
+}
+
+.item {
+  padding: 10px;
+  border-bottom: 1px solid #1e1e1e;
+  font-size: 12px;
+}
+
+.title {
+  color: #ddd;
+}
+
+.date {
+  color: #666;
+  font-size: 10px;
+}
+
+.preview {
+  white-space: pre-wrap;
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<h1>对话转换 App</h1>
+
+<textarea id="input" placeholder="粘贴 conversations.json"></textarea>
+
+<button class="primary" onclick="load()">加载数据</button>
+<button onclick="exportText()">导出 TXT</button>
+
+<div class="status" id="status">等待输入…</div>
+
+<div class="list" id="list"></div>
+
+<div class="preview" id="preview"></div>
+
+</div>
+
+<script>
+let data = [];
+
+function setStatus(t){
+  document.getElementById('status').innerText = t;
+}
+
+function load(){
+  try {
+    const raw = document.getElementById('input').value.trim();
+    data = JSON.parse(raw);
+
+    data.sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at));
+
+    setStatus("已加载：" + data.length + "条对话");
+
+    render();
+
+    localStorage.setItem("cache", raw);
+  } catch(e){
+    setStatus("JSON解析失败");
+  }
+}
+
+function render(){
+  const list = document.getElementById('list');
+  list.innerHTML = "";
+
+  data.slice(0,30).forEach((c,i)=>{
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div class="title">${c.name || "未命名"}</div>
+      <div class="date">${c.updated_at?.slice(0,10) || ""}</div>
+    `;
+    div.onclick = ()=>show(i);
+    list.appendChild(div);
+  });
+}
+
+function show(i){
+  const c = data[i];
+  const msgs = (c.chat_messages||[])
+    .filter(m=>m.text)
+    .map(m=>(m.sender==="human"?"我":"AI")+": "+m.text)
+    .join("\n\n");
+
+  document.getElementById("preview").innerText = msgs;
+}
+
+function exportText(){
+  const text = data.map(c=>{
+    return (c.name||"") + "\n" +
+      (c.chat_messages||[])
+      .map(m=>(m.sender==="human"?"我":"AI")+": "+m.text)
+      .join("\n");
+  }).join("\n\n---\n\n");
+
+  const blob = new Blob([text], {type:"text/plain"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "chat.txt";
+  a.click();
+}
+</script>
+
+</body>
+</html>
